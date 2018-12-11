@@ -1,0 +1,83 @@
+import dkg.Dkg;
+
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.List;
+import java.math.BigInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+
+public class dkgTest {
+	private static int g = 42;
+	private static BigInteger p = BigInteger.valueOf(65537);
+	private static int lowerBound = 10;
+	private static int upperBound = 10000;
+
+	public static void main(String[] args) {
+		
+		// t, n from terminal
+		final int t = Integer.parseInt(args[0]);
+		final int n = Integer.parseInt(args[1]);
+		
+		//examine input
+		if(t<0 || n<0 ) {
+			System.out.println("input should be positive");
+			System.exit(-1);
+		}
+		
+		if(t>n) {
+			System.out.println("t should be smaller than n");
+			System.exit(-1);
+		}
+		
+		Supplier<Dkg> dkgSupplier = Dkg.getSupplier(g, t, n, p, lowerBound, upperBound);
+		
+		// host dkg, receive n-1 dkgs from sub network
+		Dkg hostDkg = dkgSupplier.get();
+		final int hostIndex = 0;
+		
+		List<Dkg> subDkgs = Stream.generate(dkgSupplier)
+								  .limit(n-1)
+								  .collect(Collectors.toList());
+		
+			  
+		// calculate qualfied dkg
+		List<Integer> qual = IntStream.range(0,n-1)
+						 .boxed()
+						 .parallel()
+						 .filter(j-> hostDkg.verifyPublicVals(j, subDkgs.get(j).shares.get(hostIndex), subDkgs.get(j).publicVals))
+						 .collect(Collectors.toList());
+		
+		//calculate final shares
+		List<BigInteger> finalShares = IntStream.range(0,t)
+				 .parallel()
+				 .boxed()
+				 .map( i-> qual.parallelStream()
+							   .map(j-> subDkgs.get(j).publicVals.get(i))
+							   .reduce( (a,b) -> a.multiply(b).mod(p))
+							   .get())
+				 .collect(Collectors.toList());
+		
+	
+		
+		//calculate final secrets and set final secrets to host 
+		
+		BigInteger finalSecret = qual.parallelStream()
+									 .map(i->subDkgs.get(i).shares.get(hostIndex))
+									 .reduce((a,b)-> a.add(b))
+									 .get();
+		
+		// calculate new f
+		Function<BigInteger, BigInteger> finalFunc = z-> qual.parallelStream()
+			.map(i->subDkgs.get(i).f(z))
+			.reduce((a,b)-> a.multiply(b))
+			.get() ;
+		
+		//set final shares , secrets, final func to host dkg
+		hostDkg.setFinalShares(finalShares);
+		hostDkg.setFinalSecret(finalSecret);
+		hostDkg.finalFunc = finalFunc;
+	}	
+}
