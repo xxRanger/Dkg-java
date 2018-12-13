@@ -18,8 +18,14 @@ public class dkgTest {
 	public static void main(String[] args) {
 		
 		// t, n from terminal
+		if(args.length < 2) {
+			System.out.println("please in put n and t");
+			System.exit(-1);
+		}
+		
 		final int t = Integer.parseInt(args[0]);
 		final int n = Integer.parseInt(args[1]);
+		
 		
 		//examine input
 		if(t<0 || n<0 ) {
@@ -41,17 +47,23 @@ public class dkgTest {
 		List<Dkg> subDkgs = Stream.generate(dkgSupplier)
 								  .limit(n-1)
 								  .collect(Collectors.toList());
-		
 			  
 		// calculate qualfied dkg
-		List<Integer> qual = IntStream.range(0,n-1)
+		List<Integer> qual = IntStream.range(0,subDkgs.size())
 						 .boxed()
 						 .parallel()
-						 .filter(j-> hostDkg.verifyPublicVals(j, subDkgs.get(j).shares.get(hostIndex), subDkgs.get(j).publicVals))
+						 .filter(j-> !hostDkg.verifyPublicVals(j, subDkgs.get(j).shares.get(hostIndex), subDkgs.get(j).publicVals))
+						 .limit(t)
 						 .collect(Collectors.toList());
 		
+		if(qual.isEmpty()) {
+			System.out.println("no valid dkg");
+			return;
+		}
+		
+		System.out.println("valid number: " + qual.size());
 		//calculate final shares
-		List<BigInteger> finalShares = IntStream.range(0,t)
+		List<BigInteger> finalShares = IntStream.range(0,qual.size())
 				 .parallel()
 				 .boxed()
 				 .map( i-> qual.parallelStream()
@@ -79,5 +91,8 @@ public class dkgTest {
 		hostDkg.setFinalShares(finalShares);
 		hostDkg.setFinalSecret(finalSecret);
 		hostDkg.finalFunc = finalFunc;
+		
+		System.out.println("final shares: "+ finalShares);
+		System.out.println("final secret: "+finalSecret);
 	}	
 }

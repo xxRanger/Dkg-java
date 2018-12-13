@@ -21,7 +21,7 @@ class DkgFactory implements Supplier<Dkg> {
 	public DkgFactory(int g,int t,int n, BigInteger p, int lowerBound, int upperBound) {
 		this.g = g;
 		this.t = t;
-		this.n = t;
+		this.n = n;
 		this.p = p;
 		this.lowerBound = lowerBound;
 		this.upperBound = upperBound;
@@ -129,7 +129,7 @@ public class Dkg {
 										.apply(shareJ);
 		
 		Function<Integer,BigInteger> targetPow = bindPow(BigInteger.valueOf(j));
-		BigInteger combindedVals = IntStream.range(0,n)
+		BigInteger combindedVals = IntStream.range(0,t)
 									 		 .boxed()
 									 		 .parallel()
 									 		 .map(i->bindPowMod(publicVals.get(i)).apply(targetPow.apply(i)))
