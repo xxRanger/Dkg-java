@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-class DkgFactory implements Supplier<Dkg> {
+class JointFeldmanFactory implements Supplier<JointFeldman> {
 	
 	private final int g;
 	private final int t;
@@ -18,7 +18,7 @@ class DkgFactory implements Supplier<Dkg> {
 	public Function<BigInteger, BigInteger> func;
 	private static final Random random = new Random();
 	
-	public DkgFactory(int g,int t,int n, BigInteger p, int lowerBound, int upperBound) {
+	public JointFeldmanFactory(int g,int t,int n, BigInteger p, int lowerBound, int upperBound) {
 		this.g = g;
 		this.t = t;
 		this.n = n;
@@ -34,13 +34,13 @@ class DkgFactory implements Supplier<Dkg> {
 			  .collect(Collectors.toList());
 	}
 	
-	public Dkg get() {
+	public JointFeldman get() {
 		List<Integer> paras = genParas();
-		return new Dkg(paras,g,t,n,p);
+		return new JointFeldman(paras,g,t,n,p);
 	}
 }
 
-public class Dkg {
+public class JointFeldman {
 	private final int g;
 	private final int t;
 	private final int n;
@@ -52,7 +52,7 @@ public class Dkg {
 	public final Function<BigInteger,BigInteger>f;
 	private BigInteger finalPublicVal;
 	
-	public Dkg(List<Integer> paras, int g, int t, int n, BigInteger p) {
+	public JointFeldman(List<Integer> paras, int g, int t, int n, BigInteger p) {
 		this.t = t;
 		this.p = p;
 		this.g = g;
@@ -147,7 +147,7 @@ public class Dkg {
 		return gShare.equals(combindedVals);
 	}
 	
-	public static Supplier<Dkg> getSupplier(int g, int t, int n, BigInteger p,int lowerBound, int upperBound) {
-		return new DkgFactory(g,t,n,p,lowerBound,upperBound);
+	public static Supplier<JointFeldman> getSupplier(int g, int t, int n, BigInteger p,int lowerBound, int upperBound) {
+		return new JointFeldmanFactory(g,t,n,p,lowerBound,upperBound);
 	}
 }

@@ -1,4 +1,4 @@
-import dkg.Dkg;
+import dkg.JointFeldman;
 import java.util.function.Supplier;
 import java.util.List;
 import java.math.BigInteger;
@@ -7,7 +7,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
-public class dkgTest {
+public class JointFeldmanTest {
 	private static int g = 42;
 	private static BigInteger p = BigInteger.valueOf(65537);
 	private static int lowerBound = 10;
@@ -36,13 +36,13 @@ public class dkgTest {
 			System.exit(-1);
 		}
 		
-		Supplier<Dkg> dkgSupplier = Dkg.getSupplier(g, t, n, p, lowerBound, upperBound);
+		Supplier<JointFeldman> dkgSupplier = JointFeldman.getSupplier(g, t, n, p, lowerBound, upperBound);
 		
 		// host dkg, receive n-1 dkgs from sub network
-		Dkg hostDkg = dkgSupplier.get();
+		JointFeldman hostDkg = dkgSupplier.get();
 		final int hostIndex = 0;
 		
-		List<Dkg> subDkgs = Stream.generate(dkgSupplier)
+		List<JointFeldman> subDkgs = Stream.generate(dkgSupplier)
 								  .limit(n-1)
 								  .collect(Collectors.toList());
 			  
