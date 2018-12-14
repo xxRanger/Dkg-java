@@ -45,11 +45,11 @@ public class Dkg {
 	private final int t;
 	private final int n;
 	private final BigInteger p;
-	private final List<Integer> paras;
 	public final List<BigInteger> shares;
 	public final List<BigInteger> publicVals;
 	private List<BigInteger> finalShares;
 	private BigInteger finalSecret;
+	public final Function<BigInteger,BigInteger>f;
 	private BigInteger finalPublicVal;
 	
 	public Dkg(List<Integer> paras, int g, int t, int n, BigInteger p) {
@@ -57,9 +57,9 @@ public class Dkg {
 		this.p = p;
 		this.g = g;
 		this.n = n;
-		this.paras = paras;
+		this.f = (BigInteger z)-> func(paras,z);
 		this.shares = computeShares();
-		this.publicVals = computePublicVals();
+		this.publicVals = computePublicVals(paras);
 	}
 	
 	public synchronized void setFinalShares(List<BigInteger> finalShares) {
@@ -72,6 +72,10 @@ public class Dkg {
 	
 	public synchronized void setFinalPublicVal(BigInteger finalPublicVal) {
 		this.finalPublicVal = finalPublicVal;
+	}
+	
+	public synchronized BigInteger getFinalPublicVal() {
+		return new BigInteger(finalPublicVal.toByteArray());
 	}
 	
 	public synchronized Object[] getFinalShares() {
@@ -90,7 +94,7 @@ public class Dkg {
 		return (i) -> base.pow(i);
 	}
 	
-	public BigInteger f(final BigInteger z) {
+	private BigInteger func(List<Integer>paras, final BigInteger z) {
 		Function<BigInteger,BigInteger> zPow = bindPowMod(z);
 		return IntStream.range(0,paras.size())
 				 .boxed()
@@ -104,11 +108,11 @@ public class Dkg {
 		return IntStream.rangeClosed(1,n)
 				 .boxed()
 				 .parallel()
-				 .map(i->f(BigInteger.valueOf(i)))
+				 .map(i->f.apply(BigInteger.valueOf(i)))
 				 .collect(Collectors.toList());
 	}
 	
-	private List<BigInteger> computePublicVals() {
+	private List<BigInteger> computePublicVals(List<Integer> paras) {
 		Function<Integer,BigInteger> gPow = bindPow(BigInteger.valueOf(g));
 		
 		return IntStream.range(0,t)
