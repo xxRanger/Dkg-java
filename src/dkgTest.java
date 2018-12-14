@@ -82,15 +82,15 @@ public class dkgTest {
 									 .get();
 		
 		// calculate new f
-		Function<BigInteger, BigInteger> finalFunc = z-> qual.parallelStream()
-			.map(i->subDkgs.get(i).f(z))
-			.reduce((a,b)-> a.multiply(b))
-			.get() ;
+		BigInteger finalPublicVal = qual.parallelStream()
+										.map(i->subDkgs.get(i).publicVals.get(0))
+										.reduce((a,b)-> a.multiply(b).mod(p))
+										.get();
 		
 		//set final shares , secrets, final func to host dkg
 		hostDkg.setFinalShares(finalShares);
 		hostDkg.setFinalSecret(finalSecret);
-		hostDkg.finalFunc = finalFunc;
+		hostDkg.setFinalPublicVal(finalPublicVal);
 		
 		System.out.println("final shares: "+ finalShares);
 		System.out.println("final secret: "+finalSecret);
