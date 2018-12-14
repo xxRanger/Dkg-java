@@ -50,7 +50,7 @@ public class Dkg {
 	public final List<BigInteger> publicVals;
 	private List<BigInteger> finalShares;
 	private BigInteger finalSecret;
-	public Function<BigInteger, BigInteger> finalFunc;
+	private BigInteger finalPublicVal;
 	
 	public Dkg(List<Integer> paras, int g, int t, int n, BigInteger p) {
 		this.t = t;
@@ -68,6 +68,10 @@ public class Dkg {
 	
 	public synchronized void setFinalSecret(BigInteger finalSecret) {
 		this.finalSecret = new BigInteger(finalSecret.toByteArray());
+	}
+	
+	public synchronized void setFinalPublicVal(BigInteger finalPublicVal) {
+		this.finalPublicVal = finalPublicVal;
 	}
 	
 	public synchronized Object[] getFinalShares() {

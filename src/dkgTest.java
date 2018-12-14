@@ -1,6 +1,4 @@
 import dkg.Dkg;
-
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.List;
 import java.math.BigInteger;
@@ -19,7 +17,7 @@ public class dkgTest {
 		
 		// t, n from terminal
 		if(args.length < 2) {
-			System.out.println("please in put n and t");
+			System.out.println("please input n and t");
 			System.exit(-1);
 		}
 		
@@ -61,6 +59,7 @@ public class dkgTest {
 			return;
 		}
 		
+		System.out.println("total number:" + n);
 		System.out.println("valid number: " + qual.size());
 		//calculate final shares
 		List<BigInteger> finalShares = IntStream.range(0,qual.size())
@@ -94,5 +93,6 @@ public class dkgTest {
 		
 		System.out.println("final shares: "+ finalShares);
 		System.out.println("final secret: "+finalSecret);
+		System.out.println("final public val: "+ finalPublicVal);
 	}	
 }
