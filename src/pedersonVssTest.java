@@ -7,7 +7,7 @@ import java.util.stream.Stream;
 
 import dkg.PerdersonVss;;
 
-public class pedersonVssTest {
+public class PedersonVssTest {
 	private static final int g = 42;
 	private static final int h = 37;
 	private static final BigInteger p = BigInteger.valueOf(65537);
