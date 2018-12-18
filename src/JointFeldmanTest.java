@@ -12,6 +12,7 @@ public class JointFeldmanTest {
 	private static BigInteger p = BigInteger.valueOf(65537);
 	private static int lowerBound = 10;
 	private static int upperBound = 10000;
+	
 
 	public static void main(String[] args) {
 		

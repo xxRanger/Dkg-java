@@ -1,18 +1,91 @@
 import java.math.BigInteger;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import dkg.PerdersonVss;;
+import dkg.PerdersonVss;
 
 public class PedersonVssTest {
-	private static final int g = 42;
-	private static final int h = 37;
+	private static final int g = 2;
+	private static final int h = 3;
 	private static final BigInteger p = BigInteger.valueOf(65537);
 	private static final int lowerBound = 10;
 	private static final int upperBound = 10000;
+	
+	private <V> Pair<V,Long> executionTime(Callable<V>func){
+	  long startTime = System.currentTimeMillis();
+	  V r=null;
+	  try {
+		  r = func.call();
+	  } catch (Exception e) {
+		  System.out.println(e.getMessage());
+	  }
+      long stopTime = System.currentTimeMillis();
+      long elapsedTime = stopTime - startTime;
+      return new Pair<V,Long>(r,elapsedTime);
+	}
+	
+	private class Pair<T,U> {
+		public final T first;
+		public final U second;
+		Pair(T first, U second){
+			this.first = first;
+			this.second = second;
+		}
+	}
+	
+	private static void testTime(int t,int n) {
+		PedersonVssTest test = new PedersonVssTest();
+		Supplier<PerdersonVss> dkgSupplier = PerdersonVss.getSupplier(g, h, t, n, p, lowerBound, upperBound);
+		
+		
+		System.out.println("time for initialize sub dkgs");
+		Pair<List<PerdersonVss>, Long> rsubDkgs = test.executionTime(()-> Stream.generate(dkgSupplier)
+				  .limit(n-1)
+				  .collect(Collectors.toList()));
+		List<PerdersonVss> subDkgs = rsubDkgs.first;
+		long genSubDkgs = rsubDkgs.second;
+		final int hostIndex = 0;
+		System.out.println("exceution time:"+genSubDkgs+"ms");
+		
+		
+		System.out.println("time for initialize single dkg");
+		
+		Pair<PerdersonVss, Long> rdkg = test.executionTime(()->dkgSupplier.get());
+		PerdersonVss hostDkg = rdkg.first;
+		long genDkgTime = rdkg.second;
+		System.out.println("exceution time:"+genDkgTime+"ms");
+		
+		
+		System.out.println("time for calculate qualified subDkgs");
+		Pair<List<Integer>, Long> rQual = test.executionTime(()->hostDkg.pickQual(subDkgs, hostIndex));
+		List<Integer> qual= rQual.first;
+		long genQualTime = rQual.second;
+		System.out.println("exceution time:"+genQualTime+"ms");
+		
+		
+		System.out.println("time for generate final secret");
+		Pair<BigInteger, Long> rSecret = test.executionTime(()->hostDkg.genFinalSecret1(qual, subDkgs, hostIndex));
+		BigInteger finalSecret1 = rSecret.first;
+		long genFinalSecret1Time = rSecret.second;
+		rSecret = test.executionTime(()->hostDkg.genFinalSecret2(qual, subDkgs, hostIndex));
+		BigInteger finalSecret2 = rSecret.first;
+		long genFinalSecret2Time = rSecret.second;
+		System.out.println("exceution time:"+(genFinalSecret1Time+genFinalSecret2Time)+"ms");
+		
+		
+		System.out.println("time for generate final public val");
+		Pair<BigInteger, Long> rPublicVal = test.executionTime(()->hostDkg.genFinalPublicVal(qual, subDkgs));
+		BigInteger finalPublicVal = rPublicVal.first;
+		long genFinalPublicValTime = rPublicVal.second;
+		System.out.println("exceution time:"+genFinalPublicValTime+"ms");
+		
+		long totalTime = genDkgTime + genQualTime + genFinalSecret1Time + genFinalSecret2Time + genFinalPublicValTime;
+		System.out.println("total time:"+totalTime);
+	}
+	
 
 	public static void main(String[] args) {
 		
@@ -26,9 +99,8 @@ public class PedersonVssTest {
 			System.exit(-1);
 		}
 		
-		final int t = Integer.parseInt(args[0]);
-		final int n = Integer.parseInt(args[1]);
-		
+		int t = Integer.parseInt(args[0]);
+		int n = Integer.parseInt(args[1]);
 		
 		//examine input
 		if(t<0 || n<0 ) {
@@ -41,111 +113,96 @@ public class PedersonVssTest {
 			System.exit(-1);
 		}
 		
+		// for testTime
+		t = 101;
+		n = 300;
+		System.out.println("t: "+t+" n: "+n);
+		testTime(t, n);
+		//
 		
-		// ---------------------------------------------------------------
-		// 2.Broadcast DKG and receive DKG
-		// ---------------------------------------------------------------
-		
-		Supplier<PerdersonVss> dkgSupplier = PerdersonVss.getSupplier(g, h, t, n, p, lowerBound, upperBound);
-		
-		// host dkg, receive n-1 dkgs from sub network
-		PerdersonVss hostDkg = dkgSupplier.get();
-		final int hostIndex = 0;
-		
-		
-		// broadcast host dkg
-		// 
-		
-		
-		
-		// receive from sub dkgs
-		List<PerdersonVss> subDkgs = Stream.generate(dkgSupplier)
-								  .limit(n-1)
-								  .collect(Collectors.toList());
-			  
-		// calculate qualfied dkg
-		List<Integer> qual = IntStream.range(0,subDkgs.size())
-						 .boxed()
-						 .parallel()
-						 .filter(j-> !hostDkg.verifyPublicValsFirstStage(j,
-										 subDkgs.get(j).shares1.get(hostIndex), 
-										 subDkgs.get(j).shares2.get(hostIndex), 
-										 subDkgs.get(j).publicVals))
-						 .limit(t)
-						 .collect(Collectors.toList());
-		
-		if(qual.isEmpty()) {
-			System.out.println("no valid dkg");
-			return;
-		}
-		
-		// waiting for complaints
-		// verifyResponseFromComplaintee();
-		// if qual less than t ; then addVeriedComplainerToQual()
-		
-		System.out.println("total number:" + n);
-		System.out.println("valid number: " + qual.size());
-		
-		// ---------------------------------------------------------------
-		// 3.start to generate result
-		// ---------------------------------------------------------------
-		
-		
-		
-		// ---------------------------------------------------------------
-		// 3.1 calculate final secret
-		// ---------------------------------------------------------------
-				
-		
-		BigInteger finalSecret1 = qual.parallelStream()
-									 .map(i->subDkgs.get(i).shares1.get(hostIndex))
-									 .reduce((a,b)-> a.add(b))
-									 .get();
-		
-		BigInteger finalSecret2 = qual.parallelStream()
-									 .map(i->subDkgs.get(i).shares2.get(hostIndex))
-									 .reduce((a,b)-> a.add(b))
-									 .get();
-		
-		// ---------------------------------------------------------------
-		// 3.2 Broadcast and calculate final publicVals
-		// ---------------------------------------------------------------
-		
-		
-		// broadcast yi (shares1)
-		// broadcast()
-		
-		// receive from broadcast, verify
-		List<Integer> toConstruct = qual.parallelStream()
-				 .filter(j-> hostDkg.verifyPublicValsFinalStage(j,
-								 subDkgs.get(j).shares1.get(hostIndex), 
-								 subDkgs.get(j).publicVals))
-				 .collect(Collectors.toList());
-		
-		System.out.println("to be constructed: "+toConstruct);
-		
-		// construct for subhost in toConstruct
-		// construct() TO BE DONE
-		
-		// calculate final publicVal
-		
-		BigInteger finalPublicVal = qual.parallelStream()
-										.map(i->subDkgs.get(i).publicVals1.get(0))
-										.reduce((a,b)-> a.multiply(b).mod(p))
-										.get();
-		
-		
-		
-		// ---------------------------------------------------------------
-		// 4. Set final states
-		// ---------------------------------------------------------------
-		
-		hostDkg.setFinalSecret1(finalSecret1);
-		hostDkg.setFinalSecret1(finalSecret2);
-		hostDkg.setFinalPublicVal(finalPublicVal);
-		
-		System.out.println("final secret1: "+ finalSecret1);
-		System.out.println("final secret2: "+ finalSecret2);
-		System.out.println("final public val: "+ finalPublicVal);
+//		// ---------------------------------------------------------------
+//		// 2.Broadcast DKG and receive DKG
+//		// ---------------------------------------------------------------
+//		
+//		Supplier<PerdersonVss> dkgSupplier = PerdersonVss.getSupplier(g, h, t, n, p, lowerBound, upperBound);
+//		
+//		// host dkg, receive n-1 dkgs from sub network
+//		PerdersonVss hostDkg = dkgSupplier.get();
+//		final int hostIndex = 0;
+//		
+//		
+//		// broadcast host dkg
+//		// 
+//		
+//		
+//		
+//		// receive from sub dkgs
+//		List<PerdersonVss> subDkgs = Stream.generate(dkgSupplier)
+//								  .limit(n-1)
+//								  .collect(Collectors.toList());
+//			  
+//		// calculate qualfied dkg
+//		List<Integer> qual = hostDkg.pickQual(subDkgs, hostIndex);
+//		
+//		if(qual.isEmpty()) {
+//			System.out.println("no valid dkg");
+//			return;
+//		}
+//		
+//		// waiting for complaints
+//		// verifyResponseFromComplaintee();
+//		// if qual less than t ; then addVeriedComplainerToQual()
+//		
+//		System.out.println("total number:" + n);
+//		System.out.println("valid number: " + qual.size());
+//		
+//		// ---------------------------------------------------------------
+//		// 3.start to generate result
+//		// ---------------------------------------------------------------
+//		
+//		
+//		
+//		// ---------------------------------------------------------------
+//		// 3.1 calculate final secret
+//		// ---------------------------------------------------------------
+//				
+//		
+//		BigInteger finalSecret1 = hostDkg.genFinalSecret1(qual, subDkgs, hostIndex);
+//		
+//		BigInteger finalSecret2 = hostDkg.genFinalSecret2(qual, subDkgs, hostIndex);
+//		
+//		// ---------------------------------------------------------------
+//		// 3.2 Broadcast and calculate final publicVals
+//		// ---------------------------------------------------------------
+//		
+//		
+//		// broadcast yi (shares1)
+//		// broadcast()
+//		
+//		// receive from broadcast, verify
+//		List<Integer> toConstruct = hostDkg.genToConstruct(qual, subDkgs, hostIndex);
+//		
+//		System.out.println("to be constructed: "+toConstruct);
+//		
+//		// construct for subhost in toConstruct
+//		// construct() TO BE DONE
+//		
+//		// calculate final publicVal
+//		
+//		BigInteger finalPublicVal = hostDkg.genFinalPublicVal(qual, subDkgs);
+//		
+//		
+//		
+//		// ---------------------------------------------------------------
+//		// 4. Set final states
+//		// ---------------------------------------------------------------
+//		
+//		hostDkg.setFinalSecret1(finalSecret1);
+//		hostDkg.setFinalSecret1(finalSecret2);
+//		hostDkg.setFinalPublicVal(finalPublicVal);
+//		
+//		System.out.println("final secret1: "+ finalSecret1);
+//		System.out.println("final secret2: "+ finalSecret2);
+//		System.out.println("final public val: "+ finalPublicVal);
 	}	
 }

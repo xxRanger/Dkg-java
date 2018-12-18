@@ -183,7 +183,48 @@ public class PerdersonVss {
 		return share.equals(combindedVals);
 	}
 	
+	public List<Integer> pickQual(List<PerdersonVss> subDkgs, int hostIndex) {
+		return IntStream.range(0,subDkgs.size())
+		 .boxed()
+		 .parallel()
+		 .filter(j-> ! verifyPublicValsFirstStage(j,
+						 subDkgs.get(j).shares1.get(hostIndex), 
+						 subDkgs.get(j).shares2.get(hostIndex), 
+						 subDkgs.get(j).publicVals))
+		 .limit(t)
+		 .collect(Collectors.toList());
+	}
+	
 	public static Supplier<PerdersonVss> getSupplier(int g, int h, int t, int n, BigInteger p,int lowerBound, int upperBound) {
 		return new PerdersonVssFactory(g,h,t,n,p,lowerBound,upperBound);
+	}
+	
+	public BigInteger genFinalSecret1(List<Integer> qual,List<PerdersonVss> subDkgs, int hostIndex) {
+		return qual.parallelStream()
+		 .map(i->subDkgs.get(i).shares1.get(hostIndex))
+		 .reduce((a,b)-> a.add(b))
+		 .get();
+	}
+	
+	public BigInteger genFinalSecret2(List<Integer> qual,List<PerdersonVss> subDkgs, int hostIndex) {
+		return qual.parallelStream()
+		 .map(i->subDkgs.get(i).shares2.get(hostIndex))
+		 .reduce((a,b)-> a.add(b))
+		 .get();
+	}
+	
+	public BigInteger genFinalPublicVal(List<Integer> qual,List<PerdersonVss> subDkgs) {
+		return qual.parallelStream()
+		.map(i->subDkgs.get(i).publicVals1.get(0))
+		.reduce((a,b)-> a.multiply(b).mod(p))
+		.get();
+	}
+	
+	public List<Integer> genToConstruct(List<Integer> qual,List<PerdersonVss> subDkgs,int hostIndex) {
+		return qual.parallelStream()
+		 .filter(j-> verifyPublicValsFinalStage(j,
+						 subDkgs.get(j).shares1.get(hostIndex), 
+						 subDkgs.get(j).publicVals))
+		 .collect(Collectors.toList());
 	}
 }
