@@ -1,6 +1,7 @@
 package dkg;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
@@ -8,9 +9,11 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import utils.Utils;
+
 public class PerdersonVss {
-	private final int g;
-	private final int h;
+	private final BigInteger g;
+	private final BigInteger h;
 	private final int t;
 	private final int n;
 	private final BigInteger p;
@@ -25,7 +28,7 @@ public class PerdersonVss {
 	public final List<BigInteger> publicVals2;
 	public final List<BigInteger> publicVals;
 	
-	public PerdersonVss(List<Integer> paras1,List<Integer> paras2, int g, int h,int t, int n, BigInteger p) {
+	public PerdersonVss(List<Integer> paras1,List<Integer> paras2, BigInteger g, BigInteger h,int t, int n, BigInteger p) {
 		this.t = t;
 		this.p = p;
 		this.g = g;
@@ -72,6 +75,7 @@ public class PerdersonVss {
 	private Function<Integer,BigInteger> bindPow (final BigInteger base) {
 		return (i) -> base.pow(i);
 	}
+
 	
 	private BigInteger func(List<Integer> paras ,final BigInteger z) {
 		Function<BigInteger,BigInteger> zPow = bindPowMod(z);
@@ -91,8 +95,8 @@ public class PerdersonVss {
 				 .collect(Collectors.toList());
 	}
 	
-	private List<BigInteger> computePublicVals(List<Integer> paras, int generatorBase) {
-		Function<Integer,BigInteger> gPow = bindPow(BigInteger.valueOf(generatorBase));
+	private List<BigInteger> computePublicVals(List<Integer> paras, BigInteger generatorBase) {
+		Function<Integer,BigInteger> gPow = bindPow(generatorBase);
 		
 		return IntStream.range(0,t)
 				 .boxed()
@@ -108,8 +112,5 @@ public class PerdersonVss {
 					   .map(i-> publicVals1.get(i).multiply(publicVals2.get(i)).mod(p))
 					   .collect(Collectors.toList());
 	}
-	
-	public static Supplier<PerdersonVss> getSupplier(int g, int h, int t, int n, BigInteger p,int lowerBound, int upperBound) {
-		return new PerdersonVssFactory(g,h,t,n,p,lowerBound,upperBound);
-	}
+
 }
